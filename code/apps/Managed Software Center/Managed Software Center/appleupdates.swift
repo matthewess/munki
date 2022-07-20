@@ -42,10 +42,7 @@ func clearLogoutAndStartupFlagFiles() {
 
 func killSystemPreferencesApp() {
     // force quits System Preferences if it's open
-    let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.systempreferences")
-    for app in runningApps {
-        _ = app.forceTerminate()
-    }
+    forceTerminateApp("com.apple.systempreferences")
 }
 
 func openSoftwareUpdatePrefsPane() {

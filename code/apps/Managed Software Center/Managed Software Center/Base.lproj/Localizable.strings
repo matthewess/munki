@@ -439,6 +439,9 @@
 /* No Developer Results secondary text */
 "Try selecting another developer." = "Try selecting another developer.";
 
+/* Try to quit running apps button title */
+"Try to quit running apps" = "Try to quit running apps";
+
 /* Sidebar Type label */
 "Type" = "Type";
 

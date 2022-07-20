@@ -482,15 +482,15 @@ func pythonScriptRunning(_ scriptName: String) -> Bool {
 }
 
 func getRunningProcessesWithUsers() -> [[String:String]] {
-    // Returns a list of usernames and paths of running processes
+    // Returns a list of usernames and paths of running processes with pids
     var proc_list = [[String:String]]()
     let LaunchCFMApp = "/System/Library/Frameworks/Carbon.framework/Versions/A/Support/LaunchCFMApp"
-    let ps_out = exec("/bin/ps", args: ["-axo", "user=,comm="])
+    let ps_out = exec("/bin/ps", args: ["-axo", "user=,comm=,pid="])
     var saw_launch_cfmapp = false
     for line in ps_out.split(separator: "\n") {
         // split into max two parts on whitespace
         let parts = line.split(
-            maxSplits: 1, omittingEmptySubsequences: true,
+            maxSplits: 2, omittingEmptySubsequences: true,
             whereSeparator: { " \t".contains($0) })
         if parts.count > 1 && parts[1] == LaunchCFMApp {
             saw_launch_cfmapp = true
@@ -498,22 +498,24 @@ func getRunningProcessesWithUsers() -> [[String:String]] {
             let user = String(parts[0])
             let pathname = String(
                 parts[1]).trimmingCharacters(in: NSCharacterSet.whitespaces)
-            let info = ["user": user, "pathname": pathname]
+            let pid = String(parts[2])
+            let info = ["user": user, "pathname": pathname, "pid": pid]
             proc_list.append(info)
         }
     }
     if saw_launch_cfmapp {
         // look at the process table again with different options
         // and get the arguments for LaunchCFMApp instances
-        let ps_out = exec("/bin/ps", args: ["-axo", "user=,command="])
+        let ps_out = exec("/bin/ps", args: ["-axo", "user=,command=,pid="])
         for line in ps_out.split(separator: "\n") {
             // split into max three parts on whitespace
-            let parts = line.split(maxSplits: 2, whereSeparator: { " \t".contains($0) })
+            let parts = line.split(maxSplits: 3, whereSeparator: { " \t".contains($0) })
             if parts.count > 2 && parts[1] == LaunchCFMApp {
                 let user = String(parts[0])
                 let pathname = String(
                     parts[2]).trimmingCharacters(in: NSCharacterSet.whitespaces)
-                let info = ["user": user, "pathname": pathname]
+                let pid = String(parts[3])
+                let info = ["user": user, "pathname": pathname, "pid": pid]
                 proc_list.append(info)
             }
         }
@@ -523,7 +525,7 @@ func getRunningProcessesWithUsers() -> [[String:String]] {
 
 func getRunningBlockingApps(_ appnames: [String]) -> [[String:String]] {
     // Given a list of app names, return a list of dictionaries for apps in the list
-    // that are running. Each dictionary contains username, pathname, display_name
+    // that are running. Each dictionary contains username, pathname, display_name, pid
     let proc_list = getRunningProcessesWithUsers()
     var running_apps = [[String:String]]()
     let filemanager = FileManager.default
@@ -562,4 +564,22 @@ func getRunningBlockingApps(_ appnames: [String]) -> [[String:String]] {
         }
     }
     return running_apps
+}
+
+func forceTerminateApp(_ bundleId: String) {
+    let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId)
+    for app in runningApps {
+        _ = app.forceTerminate()
+    }
+}
+
+func forceTerminateRunningApps(_ runningApps: [[String:String]]) {
+    runningApps.map({ (app) in
+        if let pid = pid_t(app["pid"]),
+            let runningApp = NSRunningApplication(processIdentifer: pid),
+            let bundleId = runningApp.bundleIdentifier
+        {
+            forceTerminateApp(bundleId)
+        }
+    })
 }

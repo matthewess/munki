@@ -429,8 +429,14 @@ class MSCAlertController: NSObject {
                 format: formatString, Array(Set(my_apps)).joined(separator: "\n"))
         }
         alert.addButton(withTitle: NSLocalizedString("OK", comment: "OK button title"))
+        alert.addButton(withTitle: NSLocalizedString("Try to quit running apps", comment: "Try to quit running apps button title"))
         alert.beginSheetModal(for: mainWindow, completionHandler: { (modalResponse) -> Void in
-            // do nothing
+            switch modalResponse {
+                case .alertSecondButtonReturn:
+                    forceTerminateRunningApps(!other_users_apps.isEmpty ? other_users_apps : my_apps)
+                default:
+                    break
+            }
         })
         return true
     }
